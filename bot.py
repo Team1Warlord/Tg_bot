@@ -16,26 +16,32 @@ button4 = telebot.types.InlineKeyboardButton('Вывод пройденных у
 
 keyb_helping =  telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True, row_width=1).add(button1).add(button2).add(button3).add(button4)
 
-@bot.message_handler(content_types=['text', 'document', 'audio'])
+@bot.message_handler(content_types=['text'])
 def replying(message):
     if message.text == "/help":
         bot.send_message(message.chat.id, "Выберите нужный вариант.", reply_markup=keyb_helping)
         # bot.send_message(message.from_user.id, "/addword добавит слово в словарь. /addlesson добавит урок в список пройденных. /translate переведет слово если оно есть в словаре. /lessons выведет уроки проведенные в данную дату.");
-    elif message.text == "/addword":
+    elif message.text == "Добавление слова в словарь":
         bot.send_message(message.from_user.id, "Напиши слово для которого ты хочешь добавить перевод");
         bot.register_next_step_handler(message, get_word);
-    # elif message.text == "/addlesson":
+    # elif message.text == "Добавление пройденного урока":
     #     bot.register_next_step_handler(message, get_lessons);
-    # elif message.text == "/translate":
+    # elif message.text == "Вывод перевода ранее добавленного слова":
     #     bot.register_next_step_handler(message, give_translate);
-    # elif message.text == "/lessons":
+    # elif message.text == "Вывод пройденных уроков в данную дату":
     #     bot.register_next_step_handler(message, give_lessons);
     else:
         bot.send_message(message.from_user.id, "Мая твая не паниматб. Напиши /help.")
      
-word = '';
-Translation = '';
-  
+word = ''
+Translation = ''
+
+AgreementKeyboard = telebot.types.InlineKeyboardMarkup(row_width=1)
+key_yes = telebot.types.InlineKeyboardButton(text='Да', callback_data='yes') #кнопка «Да»
+AgreementKeyboard.add(key_yes); #добавляем кнопку в клавиатуру
+key_no= telebot.types.InlineKeyboardButton(text='Нет', callback_data='no')
+AgreementKeyboard.add(key_no)
+
 def get_word(message):
     global word;
     word = message.text;
@@ -45,21 +51,20 @@ def get_word(message):
 def get_wordTransl(message):
     global Translation;
     Translation = message.text;
-    keyboard = telebot.types.InlineKeyboardMarkup(row_width=3);
-    key_yes = telebot.types.InlineKeyboardButton(text='Да', callback_data='yes'); #кнопка «Да»
-    keyboard.add(key_yes); #добавляем кнопку в клавиатуру
-    key_no= telebot.types.InlineKeyboardButton(text='Нет', callback_data='no');
-    keyboard.add(key_no);
-    question = 'Слово '+word+' переводится как '+Translation+'?';
-    bot.send_message(message.from_user.id, text=question, reply_markup=keyboard)
+    question = 'Слово "'+word+'" переводится как "'+Translation+'"?';
+    bot.send_message(message.from_user.id, text=question, reply_markup=AgreementKeyboard)
+    bot.register_callback_query_handler(replyer_to_addTrans, lambda call: call.data == 'yes' or 'no');
     
-@bot.callback_query_handler(func=lambda call: True)
+@bot.callback_query_handler(func=lambda call: call.data == 'yes' or 'no')
 def replyer_to_addTrans(call):
     if call.data == "yes":
-        bot.send_message(call.message.chat.id, 'Запомню');
+        bot.send_message(call.message.chat.id, 'Запомню', reply_markup=keyb_helping);
+        bot.register_next_step_handler(call.message, replying);
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Слово "'+word+'" переводится как "'+Translation+'"?"', reply_markup=None)
     elif call.data == "no":
-        bot.register_next_step_handler(call.message, get_word);
-    
+        bot.send_message(call.message.chat.id, 'Ошиблись? Попробуйте еще раз', reply_markup=keyb_helping);
+        bot.register_next_step_handler(call.message, replying);
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Слово "'+word+'" переводится как "'+Translation+'"?"', reply_markup=None)
     
 # @bot.message_handler(commands=['help'])
 # def send_help(message):
