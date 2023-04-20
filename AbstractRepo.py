@@ -19,7 +19,7 @@ class WordTransl:
 @dataclass(slots = True)
 class Lesson_data:
 
-    date: int
+    date: str
     theme: str
     difficulty: int
     pk: int = 0
