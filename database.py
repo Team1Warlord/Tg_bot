@@ -37,7 +37,8 @@ class WordTransl(db.Entity):
 
 class Lesson_data(db.Entity):
     pk = orm.PrimaryKey(int, auto=True)
-    number = orm.Required(int)
+    date = orm.Required(str)
+    theme = orm.Required(str)
     difficulty = orm.Required(int)
 
     def get_data(self):

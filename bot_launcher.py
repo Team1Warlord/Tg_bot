@@ -31,8 +31,9 @@ button1 = telebot.types.InlineKeyboardButton('Добавление слова в
 button2 = telebot.types.InlineKeyboardButton('Добавление пройденного урока', callback_data = 'addles')
 button3 = telebot.types.InlineKeyboardButton('Вывод перевода ранее добавленного слова', callback_data = 'giveTr')
 button4 = telebot.types.InlineKeyboardButton('Вывод пройденных уроков в данную дату', callback_data = 'giveLess')
+button5 = telebot.types.InlineKeyboardButton('Вывод всех пройденных уроков', callback_data = 'giveLess')
 
-keyb_helping =  telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True, row_width=1).add(button1).add(button2).add(button3).add(button4)
+keyb_helping =  telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True, row_width=1).add(button1).add(button2).add(button3).add(button4).add(button5)
 
 @bot.message_handler(content_types=['text'])
 def replying(message):
@@ -48,8 +49,15 @@ def replying(message):
     elif message.text == "Вывод перевода ранее добавленного слова":
         bot.send_message(message.from_user.id, "Напиши слово для которого ты хочешь получить перевод")
         bot.register_next_step_handler(message, give_translate)
-    # elif message.text == "Вывод пройденных уроков в данную дату":
-    #     bot.register_next_step_handler(message, give_lessons)
+    elif message.text == "Вывод пройденных уроков в данную дату":
+        bot.send_message(message.from_user.id, "Напиши дату проведенного урока")
+        bot.register_next_step_handler(message, give_lessons)
+    elif message.text == "Вывод всех пройденных уроков":
+        give = lesson_data_repo.get_all()
+        give_lesson = 'Сохраненные в базе данных уроки:\n\n'
+        for i in give:
+            give_lesson = give_lesson + f"{i.date}  -  {i.theme}  -  {i.difficulty}\n"
+        bot.send_message(message.from_user.id, give_lesson, reply_markup=keyb_helping)
     else:
         bot.send_message(message.from_user.id, "Мая твая не паниматб. Напиши /help.")
      
@@ -116,6 +124,15 @@ def get_difficulty_of_lesson(message):
     except ValueError:
         bot.send_message(message.from_user.id, 'Неверный формат сложности, попробуйте снова', reply_markup=keyb_helping)
         
+def give_lessons(message):
+    getdate = message.text
+    compr = lesson_data_repo.get_all({'date':getdate})
+    if compr == []:
+        bot.send_message(message.from_user.id, "Такого урока в базе данных нет, занесите его", reply_markup=keyb_helping)
+    else:
+        bot.send_message(message.from_user.id, 'Урок по теме "'+compr[0].theme+'" прошел "'+compr[0].date+'" и был оценен по сложности на '+str(compr[0].difficulty)+'', reply_markup=keyb_helping)
+
+        
 @bot.callback_query_handler(func=lambda call: True)
 def replyer_to_addTrans(call):
     if call.data == "translation|yes":
@@ -130,13 +147,7 @@ def replyer_to_addTrans(call):
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Слово "'+word+'" переводится как "'+Translation+'"?"', reply_markup=None)
     elif call.data == "add_lesson|yes":
         lesson_data = ld(date_text, theme, difficulty)
-        print(lesson_data_repo.table_type)
-        print(lesson_data_repo.data_type)
-        print(lesson_data_repo.data_fields)
-
-
-        print(lesson_data)
-        # lesson_data_repo.add(lesson_data)
+        lesson_data_repo.add(lesson_data)
         bot.send_message(call.message.chat.id, 'Запомню', reply_markup=keyb_helping)
         bot.register_next_step_handler(call.message, replying)
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Урок по теме '+theme+' прошел '+date_text+', по сложности был оценен на '+difficulty_str+', все верно?', reply_markup=None)
