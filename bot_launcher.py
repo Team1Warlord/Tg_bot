@@ -1,3 +1,7 @@
+# В данном боте используется апи telebot с сохранением данных в бд с помощью склайт взятом из прошлого проекта
+# который был по теме графического интерфейса. Собирал без поетри который предлагался в прошлом проекте
+# и был обязателен, что меня крайне не устроило так как до сих пор не понял зачем он там нужен был, но не суть.
+
 
 # import os
 import telebot
@@ -8,6 +12,7 @@ from AbstractRepo import Lesson_data as ld
 from datetime import datetime
 import markdown
 from aiogram.utils.markdown import link
+
 
 
 bot = telebot.TeleBot("")
@@ -32,6 +37,7 @@ text_welcome = link('Создатель ботa', 'https://vk.com/kot_bhe_3akoha
 def send_welcome(message):
 	bot.reply_to(message, "Приветствую *Вас* в боте по изучению _иностранных языков_." +text_welcome+ ". Данный бот имеет несколько функций, выбирать между которыми вы можете нажимая на кнопки ниже.", reply_markup = keyb_helping, parse_mode="Markdown")
 
+# В данной части происходит создание клавиатуры, основной части по взаимодействию с ботом. Присутствует 2 прямых команды на ввод и 4 прямых команды на вывод, пятая команда объединяет в себя и ввод и вывод
 
 button = []
 button.append(telebot.types.InlineKeyboardButton('Добавление слова в словарь'))
@@ -48,6 +54,10 @@ keyb_helping =  telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time
 for i in button:
     keyb_helping.add(i)
     
+# В данной части идет обработка ответов с клавиатуры. 
+# Изначально (по коммитам в гите) планировалось сделать чтобы отправлялись команды с записанным внутри ответом
+# но не получилось из за небольшого объема хранимого в callback_data, 
+# из за чего решил остановиться на варианте с replyKeyboard
     
 @bot.message_handler(content_types=['text'])
 def replying(message):
@@ -58,7 +68,7 @@ def replying(message):
         bot.send_message(message.from_user.id, "Напиши слово для которого ты хочешь добавить перевод")
         bot.register_next_step_handler(message, get_word)
     elif message.text == "Добавление пройденного урока":
-        bot.send_message(message.from_user.id, "Введите дату пройденного урока в формате дд.мм.гггг.")
+        bot.send_message(message.from_user.id, "Введите дату пройденного урока в формате дд.мм.гггг")
         bot.register_next_step_handler(message, get_date_of_lesson)
     elif message.text == "Вывод перевода ранее добавленного слова":
         bot.send_message(message.from_user.id, "Напиши слово для которого ты хочешь получить перевод")
@@ -93,11 +103,15 @@ def replying(message):
     else:
         bot.send_message(message.from_user.id, "Мая твая не паниматб. Напиши /help.")
 
+# В данной части сделана обработка команд ввода и вывода определенных данных
+# вывод всех слов, уроков и ресурсов организована выше
 
 word = ''
 Translation = ''
 
-
+# Данная функция создает клавиатуру-ответчик, которая вызывает под сообщением кнопки "Да" и "Нет"
+# с соответствующими ответами в callback_data. Реализовано через возвращение в функции обработчике
+# аргумента типа стр определяющего какая это функция отправила ответ
 
 def keyb_func(operation: str): 
     AgreementKeyboard = telebot.types.InlineKeyboardMarkup(row_width=1)
@@ -106,6 +120,8 @@ def keyb_func(operation: str):
     key_no= telebot.types.InlineKeyboardButton(text='Нет', callback_data=f"{operation}|no")
     AgreementKeyboard.add(key_no)
     return AgreementKeyboard
+
+# Данные 2 функции обрабатывают ввод слова и его перевода, запись в БД происходит в функции обработчике ответа
 
 def get_word(message):
     global word
@@ -120,6 +136,8 @@ def get_wordTransl(message):
     bot.send_message(message.from_user.id, text=question, reply_markup=keyb_func('translation'))
     # bot.register_callback_query_handler(replyer_to_addTrans, lambda call: call.data == 'word_yes' or 'word_no')
     
+# Данная функция выдает введенное слово и его перевод если оно занесено в словарь    
+    
 def give_translate(message):
     getword = message.text
     compr = wordTranslation_repo.get_all({'word':getword})
@@ -127,6 +145,9 @@ def give_translate(message):
         bot.send_message(message.from_user.id, "Такого слова в словаре нема, занесите его в словарь", reply_markup=keyb_helping)
     else:
         bot.send_message(message.from_user.id, 'Перевод "'+getword+'" --- "'+compr[0].translation+'".', reply_markup=keyb_helping)
+    
+# Данные 3 функции записывают дату тему и сложность урока и передают эти данные в обработчик 
+# который в свою очередь записывает это в бд    
     
 def get_date_of_lesson(message):
     global date
@@ -137,7 +158,10 @@ def get_date_of_lesson(message):
         bot.send_message(message.from_user.id, 'Какова тема пройденного урока?')
         bot.register_next_step_handler(message, get_theme_of_lesson)
     except ValueError:
-        bot.send_message(message.from_user.id, 'Неверный формат даты, попробуйте снова', reply_markup=keyb_helping)
+        bot.send_message(message.from_user.id, 'Неверный формат даты, попробуйте снова')
+        bot.send_message(message.from_user.id, 'Введите дату пройденного урока в формате дд.мм.гггг')
+        bot.register_next_step_handler(message, get_date_of_lesson)
+        
 
 def get_theme_of_lesson(message):
     global theme
@@ -155,7 +179,13 @@ def get_difficulty_of_lesson(message):
         bot.send_message(message.from_user.id, text=question, reply_markup=keyb_func('add_lesson'))
         # bot.register_callback_query_handler(replyer_to_addlesson, lambda call: call.data == 'lesson_yes' or 'lesson_no')
     except ValueError:
-        bot.send_message(message.from_user.id, 'Неверный формат сложности, попробуйте снова', reply_markup=keyb_helping)
+        bot.send_message(message.from_user.id, 'Неверный формат сложности, попробуйте снова')
+        bot.send_message(message.from_user.id, 'Какая сложность пройденного урока? Оценивайте по шкале от 1 до 10')
+        bot.register_next_step_handler(message, get_difficulty_of_lesson)
+        
+        
+# Данная функция выдает урок по дате его проведения. Планировалось добавить выдачу уроков по темам
+# но решил пока оставить как есть        
         
 def give_lessons(message):
     getdate = message.text
@@ -164,6 +194,9 @@ def give_lessons(message):
         bot.send_message(message.from_user.id, "Такого урока в базе данных нет, занесите его", reply_markup=keyb_helping)
     else:
         bot.send_message(message.from_user.id, 'Урок по теме "'+compr[0].theme+'" прошел "'+compr[0].date+'" и был оценен по сложности на '+str(compr[0].difficulty)+'', reply_markup=keyb_helping)
+
+# Данная функция получает на вход название вебсайта и его адрес
+# после чего передает в функцию обработчик
 
 def get_website_name(message):
     global get_web_name
@@ -178,6 +211,11 @@ def get_website_link(message):
     bot.send_message(message.from_user.id, 'Верно ли введены название и ссылка на ресурс ' +web_name_with_link+'?', reply_markup=keyb_func('add_web_last'), parse_mode="Markdown")
 
 
+# Функция обработчик. Обрабатывает все ответы от функций выше, хотел сделать чтобы было несколько обработчиков
+# для каждой группы функций (к примеру для обработки добавления урока) но данный апи не позволил такое сделать
+# и вызывал всегда самый первый обработчик в любом случае. Из за чего оно так себя вело я понял, но переписать и разделить реплаер
+# уже времени не было, оставил в таком виде.
+
 @bot.callback_query_handler(func=lambda call: True)
 def replyer(call):
     if call.data == "translation|yes":
@@ -186,16 +224,18 @@ def replyer(call):
         bot.send_message(call.message.chat.id, 'Запомню', reply_markup=keyb_helping)
         bot.register_next_step_handler(call.message, replying)
     elif call.data == "translation|no":
-        bot.send_message(call.message.chat.id, 'Ошиблись? Попробуйте еще раз', reply_markup=keyb_helping)
-        bot.register_next_step_handler(call.message, replying)
+        bot.send_message(call.message.chat.id, 'Ошиблись? Попробуйте еще раз')
+        bot.send_message(call.message.from_user.id, "Напиши слово для которого ты хочешь добавить перевод")
+        bot.register_next_step_handler(call.message, get_word)
     elif call.data == "add_lesson|yes":
         lesson_data = ld(date_text, theme, difficulty)
         lesson_data_repo.add(lesson_data)
         bot.send_message(call.message.chat.id, 'Запомню', reply_markup=keyb_helping)
         bot.register_next_step_handler(call.message, replying)
     elif call.data == "add_lesson|no":
-        bot.send_message(call.message.chat.id, 'Ошиблись? Попробуйте еще раз', reply_markup=keyb_helping)
-        bot.register_next_step_handler(call.message, replying)
+        bot.send_message(call.message.chat.id, 'Ошиблись? Попробуйте еще раз')
+        bot.send_message(call.message.chat.id, 'Введите дату пройденного урока в формате дд.мм.гггг.')
+        bot.register_next_step_handler(call.message, get_date_of_lesson)
     elif call.data == "web_add|yes":
         bot.send_message(call.message.chat.id, 'Введите наименование вебсайта')
         bot.register_next_step_handler(call.message, get_website_name)
