@@ -17,6 +17,13 @@ class WordTransl:
     pk: int = 0
     
 @dataclass(slots = True)
+class Websites:
+
+    website_name: str
+    link: str
+    pk: int = 0
+    
+@dataclass(slots = True)
 class Lesson_data:
 
     date: str

@@ -16,6 +16,8 @@ class def_database():
             return WordTransl
         elif name == 'Lesson_data':
             return Lesson_data
+        elif name == 'Websites':
+            return Websites
 
 def convert_from_py2sqlite(data):
     if isinstance(data, int) and data == -1000:
@@ -33,6 +35,18 @@ class WordTransl(db.Entity):
             'pk': convert_from_py2sqlite(self.pk),
             'word': self.word,
             'translation': self.translation
+        }
+    
+class Websites(db.Entity):
+    pk = orm.PrimaryKey(int, auto=True)
+    website_name = orm.Required(str, 30)
+    link = orm.Required(str, 120)
+
+    def get_data(self):
+        return {
+            'pk': convert_from_py2sqlite(self.pk),
+            'website_name': self.website_name,
+            'link': self.link
         }
 
 class Lesson_data(db.Entity):
